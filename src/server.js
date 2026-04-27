@@ -2,7 +2,11 @@ import crypto from "node:crypto";
 import http from "node:http";
 import { URL } from "node:url";
 import { store, nextId } from "./data/store.js";
-import { ensurePlanDate, validateGoals, validateTimeBlocks } from "./utils/validation.js";
+import {
+  ensurePlanDate,
+  validateGoals,
+  validateTimeBlocks,
+} from "./utils/validation.js";
 
 function sendJson(res, status, payload) {
   res.writeHead(status, { "Content-Type": "application/json; charset=utf-8" });
@@ -55,7 +59,9 @@ function parseId(segment) {
 }
 
 function findPlanById(userId, planId) {
-  return store.dailyPlans.find((plan) => plan.id === planId && plan.userId === userId);
+  return store.dailyPlans.find(
+    (plan) => plan.id === planId && plan.userId === userId,
+  );
 }
 
 const server = http.createServer(async (req, res) => {
@@ -69,21 +75,28 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { status: "ok" });
     }
 
-    if (path === "/api/auth/google" || path === "/api/auth/kakao" || path === "/api/auth/naver") {
+    if (
+      path === "/api/auth/google" ||
+      path === "/api/auth/kakao" ||
+      path === "/api/auth/naver"
+    ) {
       if (method !== "GET") return methodNotAllowed(res);
       return sendJson(res, 200, {
         provider: parts[2],
-        message: `${parts[2]} OAuth should redirect from web client.`
+        message: `${parts[2]} OAuth should redirect from web client.`,
       });
     }
 
     if (path === "/api/auth/login/dev" && method === "POST") {
       const body = await readBody(req);
       const { providerType = "GOOGLE", providerUserId, email, nickname } = body;
-      if (!providerUserId) return sendJson(res, 400, { message: "providerUserId is required" });
+      if (!providerUserId)
+        return sendJson(res, 400, { message: "providerUserId is required" });
 
       let user = store.users.find(
-        (u) => u.providerType === providerType && u.providerUserId === providerUserId
+        (u) =>
+          u.providerType === providerType &&
+          u.providerUserId === providerUserId,
       );
       if (!user) {
         user = {
@@ -94,7 +107,7 @@ const server = http.createServer(async (req, res) => {
           nickname: nickname || null,
           profileImageUrl: null,
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+          updatedAt: new Date().toISOString(),
         };
         store.users.push(user);
       }
@@ -124,13 +137,18 @@ const server = http.createServer(async (req, res) => {
 
       if (parts.length === 2) {
         if (method === "GET") {
-          return sendJson(res, 200, store.templates.filter((t) => t.userId === userId));
+          return sendJson(
+            res,
+            200,
+            store.templates.filter((t) => t.userId === userId),
+          );
         }
 
         if (method === "POST") {
           const body = await readBody(req);
           const { name, description = null, blocks = [] } = body;
-          if (!name || !String(name).trim()) return sendJson(res, 400, { message: "name is required" });
+          if (!name || !String(name).trim())
+            return sendJson(res, 400, { message: "name is required" });
 
           const validBlocks = validateTimeBlocks(blocks);
           const now = new Date().toISOString();
@@ -152,8 +170,8 @@ const server = http.createServer(async (req, res) => {
               memo: block.memo || null,
               sortOrder: block.sortOrder,
               createdAt: now,
-              updatedAt: now
-            }))
+              updatedAt: now,
+            })),
           };
           store.templates.push(template);
           return sendJson(res, 201, template);
@@ -165,19 +183,25 @@ const server = http.createServer(async (req, res) => {
       if (parts.length === 3) {
         const templateId = parseId(parts[2]);
         if (!templateId) return notFound(res);
-        const template = store.templates.find((t) => t.id === templateId && t.userId === userId);
-        if (!template) return sendJson(res, 404, { message: "template not found" });
+        const template = store.templates.find(
+          (t) => t.id === templateId && t.userId === userId,
+        );
+        if (!template)
+          return sendJson(res, 404, { message: "template not found" });
 
         if (method === "GET") return sendJson(res, 200, template);
         if (method === "DELETE") {
-          const idx = store.templates.findIndex((t) => t.id === templateId && t.userId === userId);
+          const idx = store.templates.findIndex(
+            (t) => t.id === templateId && t.userId === userId,
+          );
           store.templates.splice(idx, 1);
           return sendNoContent(res);
         }
         if (method === "PUT") {
           const body = await readBody(req);
           const { name, description = null, blocks = [] } = body;
-          if (!name || !String(name).trim()) return sendJson(res, 400, { message: "name is required" });
+          if (!name || !String(name).trim())
+            return sendJson(res, 400, { message: "name is required" });
           const validBlocks = validateTimeBlocks(blocks);
           const now = new Date().toISOString();
           template.name = String(name).trim();
@@ -192,7 +216,7 @@ const server = http.createServer(async (req, res) => {
             memo: block.memo || null,
             sortOrder: block.sortOrder,
             createdAt: now,
-            updatedAt: now
+            updatedAt: now,
           }));
           return sendJson(res, 200, template);
         }
@@ -202,8 +226,11 @@ const server = http.createServer(async (req, res) => {
       if (parts.length === 4 && parts[3] === "copy" && method === "POST") {
         const templateId = parseId(parts[2]);
         if (!templateId) return notFound(res);
-        const source = store.templates.find((t) => t.id === templateId && t.userId === userId);
-        if (!source) return sendJson(res, 404, { message: "template not found" });
+        const source = store.templates.find(
+          (t) => t.id === templateId && t.userId === userId,
+        );
+        if (!source)
+          return sendJson(res, 404, { message: "template not found" });
 
         const now = new Date().toISOString();
         const newId = nextId("template");
@@ -219,8 +246,8 @@ const server = http.createServer(async (req, res) => {
             id: nextId("templateBlock"),
             templateId: newId,
             createdAt: now,
-            updatedAt: now
-          }))
+            updatedAt: now,
+          })),
         };
         store.templates.push(copy);
         return sendJson(res, 201, copy);
@@ -229,8 +256,11 @@ const server = http.createServer(async (req, res) => {
       if (parts.length === 4 && parts[3] === "default" && method === "PUT") {
         const templateId = parseId(parts[2]);
         if (!templateId) return notFound(res);
-        const target = store.templates.find((t) => t.id === templateId && t.userId === userId);
-        if (!target) return sendJson(res, 404, { message: "template not found" });
+        const target = store.templates.find(
+          (t) => t.id === templateId && t.userId === userId,
+        );
+        if (!target)
+          return sendJson(res, 404, { message: "template not found" });
 
         for (const template of store.templates) {
           if (template.userId === userId) template.isDefault = false;
@@ -257,7 +287,12 @@ const server = http.createServer(async (req, res) => {
         }
         if (method === "POST") {
           const body = await readBody(req);
-          const { planDate, templateId = null, goals = [], timeBlocks = [] } = body;
+          const {
+            planDate,
+            templateId = null,
+            goals = [],
+            timeBlocks = [],
+          } = body;
           ensurePlanDate(planDate);
           const validGoals = validateGoals(goals);
           const validTimeBlocks = validateTimeBlocks(timeBlocks);
@@ -278,7 +313,7 @@ const server = http.createServer(async (req, res) => {
               isCompleted: goal.isCompleted,
               sortOrder: goal.sortOrder,
               createdAt: now,
-              updatedAt: now
+              updatedAt: now,
             })),
             timeBlocks: validTimeBlocks.map((block) => ({
               id: nextId("dailyTimeBlock"),
@@ -290,8 +325,8 @@ const server = http.createServer(async (req, res) => {
               isCompleted: Boolean(block.isCompleted),
               sortOrder: block.sortOrder,
               createdAt: now,
-              updatedAt: now
-            }))
+              updatedAt: now,
+            })),
           };
 
           store.dailyPlans.push(plan);
@@ -304,17 +339,25 @@ const server = http.createServer(async (req, res) => {
         const planId = parseId(parts[2]);
         if (!planId) return notFound(res);
         const plan = findPlanById(userId, planId);
-        if (!plan) return sendJson(res, 404, { message: "daily plan not found" });
+        if (!plan)
+          return sendJson(res, 404, { message: "daily plan not found" });
 
         if (method === "GET") return sendJson(res, 200, plan);
         if (method === "DELETE") {
-          const idx = store.dailyPlans.findIndex((p) => p.id === planId && p.userId === userId);
+          const idx = store.dailyPlans.findIndex(
+            (p) => p.id === planId && p.userId === userId,
+          );
           store.dailyPlans.splice(idx, 1);
           return sendNoContent(res);
         }
         if (method === "PUT") {
           const body = await readBody(req);
-          const { planDate, templateId = null, goals = [], timeBlocks = [] } = body;
+          const {
+            planDate,
+            templateId = null,
+            goals = [],
+            timeBlocks = [],
+          } = body;
           ensurePlanDate(planDate);
           const validGoals = validateGoals(goals);
           const validTimeBlocks = validateTimeBlocks(timeBlocks);
@@ -329,7 +372,7 @@ const server = http.createServer(async (req, res) => {
             isCompleted: goal.isCompleted,
             sortOrder: goal.sortOrder,
             createdAt: now,
-            updatedAt: now
+            updatedAt: now,
           }));
           plan.timeBlocks = validTimeBlocks.map((block) => ({
             id: nextId("dailyTimeBlock"),
@@ -341,18 +384,25 @@ const server = http.createServer(async (req, res) => {
             isCompleted: Boolean(block.isCompleted),
             sortOrder: block.sortOrder,
             createdAt: now,
-            updatedAt: now
+            updatedAt: now,
           }));
           return sendJson(res, 200, plan);
         }
         return methodNotAllowed(res);
       }
 
-      if (parts.length === 4 && parts[2] === "from-template" && method === "POST") {
+      if (
+        parts.length === 4 &&
+        parts[2] === "from-template" &&
+        method === "POST"
+      ) {
         const templateId = parseId(parts[3]);
         if (!templateId) return notFound(res);
-        const template = store.templates.find((t) => t.id === templateId && t.userId === userId);
-        if (!template) return sendJson(res, 404, { message: "template not found" });
+        const template = store.templates.find(
+          (t) => t.id === templateId && t.userId === userId,
+        );
+        if (!template)
+          return sendJson(res, 404, { message: "template not found" });
 
         const body = await readBody(req);
         ensurePlanDate(body.planDate);
@@ -376,8 +426,8 @@ const server = http.createServer(async (req, res) => {
             isCompleted: false,
             sortOrder: block.sortOrder,
             createdAt: now,
-            updatedAt: now
-          }))
+            updatedAt: now,
+          })),
         };
         store.dailyPlans.push(plan);
         return sendJson(res, 201, plan);
@@ -392,7 +442,7 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 5000;
 server.listen(port, () => {
   console.log(`TimeBox Planner backend listening on :${port}`);
 });

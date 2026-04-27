@@ -11,5 +11,11 @@
   },
   "engines": {
     "node": ">=20"
+  },
+  "devDependencies": {
+    "prisma": "^7.8.0"
+  },
+  "dependencies": {
+    "@prisma/client": "^7.8.0"
   }
 }
